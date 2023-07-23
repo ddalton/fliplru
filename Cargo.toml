@@ -1,6 +1,6 @@
 [package]
 name = "fliplru"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A LRU cache that shows effectiveness of cache capacity"
 license-file = "LICENSE"
