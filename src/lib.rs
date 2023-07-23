@@ -9,10 +9,11 @@ pub struct LruCache<K, V> {
     l1_map: HashMap<K, V>,
     l2_map: HashMap<K, V>,
     cap: NonZeroUsize,
+    flips: usize,
 }
 
 impl<K: Hash + Eq, V> LruCache<K, V> {
-    /// Creates a new LRU Cache that holds `cap` items. 
+    /// Creates a new LRU Cache that holds `cap` items.
     /// It can fetch upto the last `cap*2` items, but only
     /// the last `cap` items is guaranteed to be in the cache.
     ///
@@ -33,6 +34,7 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
             l1_map: HashMap::with_capacity(cap.into()),
             l2_map: HashMap::with_capacity(cap.into()),
             cap,
+            flips: 0,
         }
     }
 
@@ -95,6 +97,7 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
         if self.l1_map.len() == self.cap.into() {
             swap(&mut self.l2_map, &mut self.l1_map);
             let _ = replace(&mut self.l1_map, HashMap::with_capacity(self.cap.into()));
+            self.flips += 1;
         }
         // invalidate any existing entry in L2 cache
         let ov = self.l2_map.remove(&k);
@@ -117,6 +120,14 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
     pub fn is_empty(&self) -> bool {
         self.l1_map.len() == 0 && self.l2_map.len() == 0
     }
+
+    pub fn get_flips(&self) -> usize {
+        self.flips
+    }
+
+    pub fn reset(&mut self) {
+        self.flips = 0;
+    }
 }
 
 #[cfg(test)]
@@ -133,12 +144,14 @@ mod tests {
     fn test_put_and_get() {
         let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
         assert!(cache.is_empty());
+        assert_eq!(cache.get_flips(), 0);
 
         assert_eq!(cache.put("apple", "red"), None);
         assert_eq!(cache.put("banana", "yellow"), None);
 
         assert_eq!(cache.cap().get(), 2);
         assert_eq!(cache.len(), 2);
+        assert_eq!(cache.get_flips(), 0);
         assert!(!cache.is_empty());
         assert_opt_eq(cache.get(&"apple"), "red");
         assert_opt_eq(cache.get(&"banana"), "yellow");
@@ -159,22 +172,27 @@ mod tests {
     fn test_l2() {
         let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
 
+        assert_eq!(cache.get_flips(), 0);
         assert_eq!(cache.put("apple", "red"), None);
         assert_eq!(cache.put("banana", "yellow"), None);
         assert_eq!(cache.put("pear", "green"), None);
+        assert_eq!(cache.get_flips(), 1);
 
         // This is retrieved from the overflow (L2 cache)
         assert_opt_eq(cache.get(&"apple"), "red");
         assert_opt_eq(cache.get(&"banana"), "yellow");
         assert_opt_eq(cache.get(&"pear"), "green");
+        assert_eq!(cache.get_flips(), 2);
 
         // apple is no longer in both the caches
         assert_eq!(cache.put("apple", "green"), None);
         assert_eq!(cache.put("tomato", "red"), None);
+        assert_eq!(cache.get_flips(), 3);
 
         assert_opt_eq(cache.get(&"pear"), "green");
         assert_opt_eq(cache.get(&"apple"), "green");
         assert_opt_eq(cache.get(&"tomato"), "red");
+        assert_eq!(cache.get_flips(), 5);
     }
 
     #[test]
@@ -185,15 +203,20 @@ mod tests {
         assert_eq!(cache.put("banana", "yellow"), None);
         assert_eq!(cache.put("pear", "green"), None);
         assert_eq!(cache.put("tomato", "red"), None);
+        assert_eq!(cache.get_flips(), 1);
 
         // Could retrieve `cap*2` oldest item, i.e., the 4th oldest item.
         assert_opt_eq(cache.get(&"apple"), "red");
+        assert_eq!(cache.get_flips(), 2);
 
         // Could not retrieve `cap+1` oldest item, i.e., the 3rd oldest item, showing that only the
         // first `cap` items is guaranteed to be in the cache.
         assert_eq!(cache.get(&"banana"), None);
-    }
+        assert_eq!(cache.get_flips(), 2);
 
+        cache.reset();
+        assert_eq!(cache.get_flips(), 0);
+    }
 
     #[test]
     fn test_get_with_borrow() {
