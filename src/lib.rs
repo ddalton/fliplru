@@ -1,7 +1,8 @@
 use core::borrow::Borrow;
 use core::hash::Hash;
 use hashbrown::HashMap;
-use std::{mem::replace, mem::swap, num::NonZeroUsize};
+use polonius_the_crab::{polonius, polonius_return};
+use std::{cmp, mem::replace, mem::swap, num::NonZeroUsize};
 
 /// An LRU Cache
 pub struct LruCache<K, V> {
@@ -11,17 +12,14 @@ pub struct LruCache<K, V> {
 }
 
 impl<K: Hash + Eq, V> LruCache<K, V> {
-    /// Creates a new LRU Cache that holds at most `cap*2` items. Though it never
-    /// reaches the `cap*2` capacity most of the time.
+    /// Creates a new LRU Cache that holds `cap` items. 
+    /// It can fetch upto the last `cap*2` items, but only
+    /// the last `cap` items is guaranteed to be in the cache.
     ///
     /// When the cache is full (reached cap items), then a "flip" occurs internally,
     /// where the full cache is backed up and an empty cache is brought in its place.
     /// Then as cache misses occur, the cache gets populated internally from the backup
     /// cache if the item is found there or a miss is reported to the user.
-    ///
-    /// Once the cache becomes full, the "flip" happens again and the full cache becomes
-    /// the backup cache. Any items in the old backup cache is dropped. So that is why it
-    /// does not represent a true `cap*2` items capacity.
     ///
     /// # Example
     ///
@@ -61,18 +59,21 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
         K: Borrow<Q>,
         Q: Hash + Eq + ?Sized,
     {
-        if !self.l1_map.contains_key(k) {
-            match self.l2_map.remove_entry(k) {
-                Some((rk, rv)) => {
-                    self.put(rk, rv);
-                }
-                None => (),
-            };
+        let mut this = self;
+        polonius!(|this| -> Option<&'polonius V> {
+            if let Some(v) = this.l1_map.get(k) {
+                polonius_return!(Some(v));
+            }
+        });
+
+        match this.l2_map.remove_entry(k) {
+            Some((rk, rv)) => {
+                this.put(rk, rv);
+                this.l1_map.get(k)
+            }
+            None => None,
         }
-
-        return self.l1_map.get(k);
     }
-
     /// Puts a key-value pair into cache. If the key already exists in the cache, then it updates
     /// the key's value and returns the old value. Otherwise, `None` is returned.
     ///
@@ -85,25 +86,32 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
     ///
     /// assert_eq!(None, cache.put(1, "a"));
     /// assert_eq!(None, cache.put(2, "b"));
-    /// assert_eq!(None, cache.put(2, "beta"));
+    /// assert_eq!(Some("b"), cache.put(2, "beta"));
     ///
     /// assert_eq!(cache.get(&1), Some(&"a"));
     /// assert_eq!(cache.get(&2), Some(&"beta"));
     /// ```
     pub fn put(&mut self, k: K, v: V) -> Option<V> {
-        if self.l1_map.len() >= self.cap.into() {
+        if self.l1_map.len() == self.cap.into() {
             swap(&mut self.l2_map, &mut self.l1_map);
             let _ = replace(&mut self.l1_map, HashMap::with_capacity(self.cap.into()));
         }
-        self.l1_map.insert(k, v)
+        // invalidate any existing entry in L2 cache
+        let ov = self.l2_map.remove(&k);
+        match self.l1_map.insert(k, v) {
+            Some(l1_v) => Some(l1_v),
+            None => ov,
+        }
     }
 
     pub fn cap(&self) -> NonZeroUsize {
         self.cap
     }
 
+    /// We have reached cache capacity if the number of entries
+    /// in both caches combined exceeds cap
     pub fn len(&self) -> usize {
-        self.l1_map.len() + self.l2_map.len()
+        cmp::min(self.l1_map.len() + self.l2_map.len(), self.cap().into())
     }
 
     pub fn is_empty(&self) -> bool {
@@ -134,5 +142,66 @@ mod tests {
         assert!(!cache.is_empty());
         assert_opt_eq(cache.get(&"apple"), "red");
         assert_opt_eq(cache.get(&"banana"), "yellow");
+    }
+
+    #[test]
+    fn test_put_update() {
+        let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+
+        assert_eq!(cache.put("apple", "red"), None);
+        assert_eq!(cache.put("apple", "green"), Some("red"));
+
+        assert_eq!(cache.len(), 1);
+        assert_opt_eq(cache.get(&"apple"), "green");
+    }
+
+    #[test]
+    fn test_l2() {
+        let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+
+        assert_eq!(cache.put("apple", "red"), None);
+        assert_eq!(cache.put("banana", "yellow"), None);
+        assert_eq!(cache.put("pear", "green"), None);
+
+        // This is retrieved from the overflow (L2 cache)
+        assert_opt_eq(cache.get(&"apple"), "red");
+        assert_opt_eq(cache.get(&"banana"), "yellow");
+        assert_opt_eq(cache.get(&"pear"), "green");
+
+        // apple is no longer in both the caches
+        assert_eq!(cache.put("apple", "green"), None);
+        assert_eq!(cache.put("tomato", "red"), None);
+
+        assert_opt_eq(cache.get(&"pear"), "green");
+        assert_opt_eq(cache.get(&"apple"), "green");
+        assert_opt_eq(cache.get(&"tomato"), "red");
+    }
+
+    #[test]
+    fn test_max_cache_len() {
+        let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+
+        assert_eq!(cache.put("apple", "red"), None);
+        assert_eq!(cache.put("banana", "yellow"), None);
+        assert_eq!(cache.put("pear", "green"), None);
+        assert_eq!(cache.put("tomato", "red"), None);
+
+        // Could retrieve `cap*2` oldest item, i.e., the 4th oldest item.
+        assert_opt_eq(cache.get(&"apple"), "red");
+
+        // Could not retrieve `cap+1` oldest item, i.e., the 3rd oldest item, showing that only the
+        // first `cap` items is guaranteed to be in the cache.
+        assert_eq!(cache.get(&"banana"), None);
+    }
+
+
+    #[test]
+    fn test_get_with_borrow() {
+        let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+
+        let key = String::from("apple");
+        cache.put(key, "red");
+
+        assert_opt_eq(cache.get("apple"), "red");
     }
 }

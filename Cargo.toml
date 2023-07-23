@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 hashbrown = "0.14.0"
+polonius-the-crab = "0.3.1"
