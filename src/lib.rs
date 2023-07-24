@@ -1,8 +1,11 @@
+#![no_std]
+
 use core::borrow::Borrow;
 use core::hash::Hash;
+use core::num::NonZeroUsize;
+use core::{cmp, mem};
 use hashbrown::HashMap;
 use polonius_the_crab::{polonius, polonius_return};
-use std::{cmp, mem::replace, mem::swap, num::NonZeroUsize};
 
 /// An LRU Cache
 pub struct LruCache<K, V> {
@@ -95,8 +98,8 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
     /// ```
     pub fn put(&mut self, k: K, v: V) -> Option<V> {
         if self.l1_map.len() == self.cap.into() {
-            swap(&mut self.l2_map, &mut self.l1_map);
-            let _ = replace(&mut self.l1_map, HashMap::with_capacity(self.cap.into()));
+            mem::swap(&mut self.l2_map, &mut self.l1_map);
+            let _ = mem::replace(&mut self.l1_map, HashMap::with_capacity(self.cap.into()));
             self.flips += 1;
         }
         // invalidate any existing entry in L2 cache
@@ -219,12 +222,28 @@ mod tests {
     }
 
     #[test]
-    fn test_get_with_borrow() {
+    fn test_cache_under_capacity() {
         let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+        for i in 0..5 {
+            cache.put(i, i);
+        }
+        for i in 0..20 {
+            cache.get(&(i % 5));
+        }
 
-        let key = String::from("apple");
-        cache.put(key, "red");
+        assert_eq!(cache.get_flips(), 8);
+    }
 
-        assert_opt_eq(cache.get("apple"), "red");
+    #[test]
+    fn test_cache_over_capacity() {
+        let mut cache = LruCache::new(NonZeroUsize::new(5).unwrap());
+        for i in 0..5 {
+            cache.put(i, i);
+        }
+        for i in 0..20 {
+            cache.get(&(i % 5));
+        }
+
+        assert_eq!(cache.get_flips(), 0);
     }
 }
