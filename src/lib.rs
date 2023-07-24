@@ -110,24 +110,101 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
         }
     }
 
+    /// Returns the maximum number of key-value pairs the cache can hold.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fliplru::LruCache;
+    /// use std::num::NonZeroUsize;
+    /// let mut cache: LruCache<isize, &str> = LruCache::new(NonZeroUsize::new(2).unwrap());
+    /// assert_eq!(cache.cap().get(), 2);
+    /// ```
     pub fn cap(&self) -> NonZeroUsize {
         self.cap
     }
 
-    /// We have reached cache capacity if the number of entries
-    /// in both caches combined exceeds cap
+    /// Returns the number of key-value pairs that are currently in the the cache.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fliplru::LruCache;
+    /// use std::num::NonZeroUsize;
+    /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+    /// assert_eq!(cache.len(), 0);
+    ///
+    /// cache.put(1, "a");
+    /// assert_eq!(cache.len(), 1);
+    ///
+    /// cache.put(2, "b");
+    /// assert_eq!(cache.len(), 2);
+    ///
+    /// cache.put(3, "c");
+    /// assert_eq!(cache.len(), 2);
+    /// ```
     pub fn len(&self) -> usize {
         cmp::min(self.l1_map.len() + self.l2_map.len(), self.cap().into())
     }
 
+    /// Returns a bool indicating whether the cache is empty or not.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fliplru::LruCache;
+    /// use std::num::NonZeroUsize;
+    /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+    /// assert!(cache.is_empty());
+    ///
+    /// cache.put(1, "a");
+    /// assert!(!cache.is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
         self.l1_map.len() == 0 && self.l2_map.len() == 0
     }
+
+    /// Returns metric on the number of times the cache became full.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fliplru::LruCache;
+    /// use std::num::NonZeroUsize;
+    /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+    ///
+    /// for i in 0..5 {
+    ///     cache.put(i, i);
+    /// }
+    /// for i in 0..20 {
+    ///     cache.get(&(i % 5));
+    /// }
+    /// assert_eq!(cache.get_flips(), 8);
+    /// ```
 
     pub fn get_flips(&self) -> usize {
         self.flips
     }
 
+    /// Reset the flip metric.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fliplru::LruCache;
+    /// use std::num::NonZeroUsize;
+    /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+    ///
+    /// for i in 0..5 {
+    ///     cache.put(i, i);
+    /// }
+    /// for i in 0..20 {
+    ///     cache.get(&(i % 5));
+    /// }
+    /// assert_eq!(cache.get_flips(), 8);
+    /// cache.reset();
+    /// assert_eq!(cache.get_flips(), 0);
+    /// ```
     pub fn reset(&mut self) {
         self.flips = 0;
     }
