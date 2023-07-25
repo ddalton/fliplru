@@ -16,6 +16,39 @@ A flips metric is exposed to help tune the cache capacity. Flips represent the n
 If the flips count is 0, then the cache is oversized. If the flip count is very high and close to the number of accesses/capacity then the cache is not being used effectively and the capacity has to be increased.
 
 The API has been inspired by [lru](https://crates.io/crates/lru) by [Jerome Froelich](https://github.com/jeromefroe). 
+
+## Find if cache capacity is too small for use case
+Below is example of a check to find if the cache has been configured with less capacity.
+In this example the cache is accessed for 20 times and the flip count is 8 for a cache capacity of 2. This indicates there is no caching occurring for the access pattern.
+
+```
+let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+for i in 0..5 {
+    cache.put(i, i);
+}
+for i in 0..20 {
+    cache.get(&(i % 5));
+}
+
+assert_eq!(cache.get_flips(), 8);
+```
+
+## Find if cache capacity is too large for use case
+Below is example of a check to find if the cache has been configured with more than enough capacity.
+In this example the cache is accessed for 20 times and the number of flips is 0 for a cache capacity of 5. This indicates the cache fully satisfies every access made.
+
+```
+let mut cache = LruCache::new(NonZeroUsize::new(5).unwrap());
+for i in 0..5 {
+    cache.put(i, i);
+}
+for i in 0..20 {
+    cache.get(&(i % 5));
+}
+
+assert_eq!(cache.get_flips(), 0);
+```
+
 # Status
 
 It is a basic LRU cache with metrics to help with cache capacity tuning. Provides a fast get API.

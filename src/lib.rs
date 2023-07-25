@@ -79,6 +79,47 @@ impl<K: Hash + Eq, V> LruCache<K, V> {
             None => None,
         }
     }
+
+    /// Returns a mutable reference to the value of the key in the cache or `None` if it
+    /// is not present in the cache. Moves the key to the l1_map if it exists in the l2_map.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fliplru::LruCache;
+    /// use std::num::NonZeroUsize;
+    /// let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
+    ///
+    /// cache.put("apple", 8);
+    /// cache.put("banana", 4);
+    /// cache.put("banana", 6);
+    /// cache.put("pear", 2);
+    ///
+    /// assert_eq!(cache.get_mut(&"apple"), Some(&mut 8));
+    /// assert_eq!(cache.get_mut(&"banana"), Some(&mut 6));
+    /// assert_eq!(cache.get_mut(&"pear"), Some(&mut 2));
+    /// ```
+    pub fn get_mut<'a, Q>(&'a mut self, k: &Q) -> Option<&'a mut V>
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq + ?Sized,
+    {
+        let mut this = self;
+        polonius!(|this| -> Option<&'polonius mut V> {
+            if let Some(v) = this.l1_map.get_mut(k) {
+                polonius_return!(Some(v));
+            }
+        });
+
+        match this.l2_map.remove_entry(k) {
+            Some((rk, rv)) => {
+                this.put(rk, rv);
+                this.l1_map.get_mut(k)
+            }
+            None => None,
+        }
+    }
+
     /// Puts a key-value pair into cache. If the key already exists in the cache, then it updates
     /// the key's value and returns the old value. Otherwise, `None` is returned.
     ///

@@ -1,6 +1,8 @@
 #![feature(test)]
 extern crate caches;
+extern crate fast_lru;
 extern crate lru;
+extern crate lru_cache;
 extern crate test;
 
 #[cfg(test)]
@@ -90,6 +92,32 @@ mod tests {
         let mut i: usize = 0;
         b.iter(|| {
             cache.get(&i);
+            i = (i + 7) % CAPACITY;
+        });
+    }
+
+    #[bench]
+    fn bench_read_usize_extern_fastlru(b: &mut Bencher) {
+        let mut cache: fast_lru::LruCache<_, _, CAPACITY> = fast_lru::LruCache::new();
+        for i in 0..CAPACITY {
+            cache.put(i, i);
+        }
+        let mut i: usize = 0;
+        b.iter(|| {
+            cache.get(&i);
+            i = (i + 7) % CAPACITY;
+        });
+    }
+
+    #[bench]
+    fn bench_read_usize_extern_lru_cache(b: &mut Bencher) {
+        let mut cache = lru_cache::LruCache::new(CAPACITY);
+        for i in 0..CAPACITY {
+            cache.insert(i, i);
+        }
+        let mut i: usize = 0;
+        b.iter(|| {
+            cache.get_mut(&i);
             i = (i + 7) % CAPACITY;
         });
     }
