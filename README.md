@@ -8,10 +8,11 @@ The goals of this cache data structure are two-fold:
 
 There is another goal but it is implementation related and I didn't want to use a linked list.
 
-The implementation is based on 2 hashmaps to provide the LRU functionality. So the total capacity of this cache is `cap*2` internally.
-The `cap` LRU items are guaranteed to be in the cache. The `cap+` to `cap*2` LRU items maybe in the cache, but this is not guaranteed.
+The implementation is based on 2 hashmaps to provide the LRU functionality. So the total capacity of this cache is `2*cap` LRU items.
+The `cap` LRU items are guaranteed to be in the cache. The `cap+1` to `2*cap` LRU items maybe in the cache, but this is not guaranteed.
 
 The hashbrown map is used along with the 2 cache design to provide a fast get API.
+
 A flips metric is exposed to help tune the cache capacity. Flips represent the number of times the cache capacity is reached. It empties the cache and refills it in a way the performance is not affected (see benchmarks below).
 If the flips count is 0, then the cache is oversized. If the flip count is very high and close to the number of accesses/capacity then the cache is not being used effectively and the capacity has to be increased.
 
@@ -56,18 +57,21 @@ It is a basic LRU cache with metrics to help with cache capacity tuning. Provide
 # Benchmarks
 
 The benchmarks has been inspired by [HashLRU](https://gitlab.com/liberecofr/hashlru) by Christian Mauduit
-Benchmarks of various caches using the get API. Run on MacBook Air with 100k items cache.
+
+Benchmark comparisons of the get API using various caches implementations configured with 100000 capacity. This was run on a 2020 MacBook Air.
 
 ```
-running 6 tests
-test tests::bench_read_usize_builtin_hashmap    ... bench:          10 ns/iter (+/- 0)
-test tests::bench_read_usize_extern_caches      ... bench:          24 ns/iter (+/- 0)
-test tests::bench_read_usize_extern_fliplru     ... bench:           7 ns/iter (+/- 0)
-test tests::bench_read_usize_extern_lru         ... bench:          10 ns/iter (+/- 0)
-test tests::bench_read_usize_hashlru_cache      ... bench:          10 ns/iter (+/- 0)
+running 8 tests
+test tests::bench_read_usize_builtin_hashmap    ... bench:          16 ns/iter (+/- 0)
+test tests::bench_read_usize_caches             ... bench:          37 ns/iter (+/- 16)
+test tests::bench_read_usize_fastlru            ... bench:          48 ns/iter (+/- 7)
+test tests::bench_read_usize_fliplru            ... bench:           7 ns/iter (+/- 0)
+test tests::bench_read_usize_hashlru_cache      ... bench:          10 ns/iter (+/- 1)
 test tests::bench_read_usize_hashlru_sync_cache ... bench:          15 ns/iter (+/- 0)
+test tests::bench_read_usize_lru                ... bench:          10 ns/iter (+/- 0)
+test tests::bench_read_usize_lru_cache          ... bench:          38 ns/iter (+/- 0)
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 6 measured; 0 filtered out; finished in 14.49s
+test result: ok. 0 passed; 0 failed; 0 ignored; 8 measured; 0 filtered out; finished in 14.09s
 ```
 
 To run the benchmarks:

@@ -58,7 +58,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_read_usize_extern_lru(b: &mut Bencher) {
+    fn bench_read_usize_lru(b: &mut Bencher) {
         let mut cache = LruCache::new(NonZeroUsize::new(CAPACITY).unwrap());
         for i in 0..CAPACITY {
             cache.push(i, i);
@@ -71,7 +71,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_read_usize_extern_caches(b: &mut Bencher) {
+    fn bench_read_usize_caches(b: &mut Bencher) {
         let mut cache = LRUCache::new(CAPACITY).unwrap();
         for i in 0..CAPACITY {
             cache.put(i, i);
@@ -84,7 +84,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_read_usize_extern_fliplru(b: &mut Bencher) {
+    fn bench_read_usize_fliplru(b: &mut Bencher) {
         let mut cache = fliplru::LruCache::new(NonZeroUsize::new(CAPACITY).unwrap());
         for i in 0..CAPACITY {
             cache.put(i, i);
@@ -97,7 +97,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_read_usize_extern_fastlru(b: &mut Bencher) {
+    fn bench_read_usize_fastlru(b: &mut Bencher) {
         let mut cache: fast_lru::LruCache<_, _, CAPACITY> = fast_lru::LruCache::new();
         for i in 0..CAPACITY {
             cache.put(i, i);
@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_read_usize_extern_lru_cache(b: &mut Bencher) {
+    fn bench_read_usize_lru_cache(b: &mut Bencher) {
         let mut cache = lru_cache::LruCache::new(CAPACITY);
         for i in 0..CAPACITY {
             cache.insert(i, i);

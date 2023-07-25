@@ -63,7 +63,7 @@ dependencies = [
 
 [[package]]
 name = "fliplru"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "hashbrown 0.14.0",
  "polonius-the-crab",
