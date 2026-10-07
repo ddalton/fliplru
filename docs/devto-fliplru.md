@@ -145,6 +145,10 @@ So fliplru fits best where operations are very frequent and misses are cheap (me
 small computations, interning, write-heavy caches), or wherever you want the cache to tell
 you whether it is the right size.
 
+It is also `no_std` and builds for bare-metal targets such as Cortex-M (it needs an
+allocator). All of its memory is allocated when the cache is created, and flips reuse it, so
+it never allocates afterwards, which matters where heap fragmentation is a risk.
+
 ## What made it fast, and what didn't work
 
 The optimizations that paid off:
