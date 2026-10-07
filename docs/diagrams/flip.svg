@@ -1,0 +1,66 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 970 475' width='970' height='475' role='img' aria-label='How a flip works'>
+<title>How a flip works</title>
+<rect width='970' height='475' fill='#FFFFFF'/>
+<defs><marker id='a' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto'><path d='M0,0 L10,5 L0,10 z' fill='#3D4650'/></marker></defs>
+<text x='470' y='32' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='20' fill='#14181D' font-weight='bold' text-anchor='middle'>How a flip works (cap = 3)</text>
+<text x='165' y='72' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#3D4650' font-weight='bold' text-anchor='middle'>1. The current generation is full</text>
+<text x='475' y='72' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#3D4650' font-weight='bold' text-anchor='middle'>2. put(d): it flips</text>
+<text x='785' y='72' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#3D4650' font-weight='bold' text-anchor='middle'>3. get(b): a promotion</text>
+<rect x='98' y='110' width='134' height='66' rx='8' fill='#E3F2EB' stroke='#0F7A55' stroke-width='2'/>
+<text x='165.0' y='102' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#0F7A55' font-weight='bold' text-anchor='middle'>current</text>
+<rect x='110' y='128' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#0F7A55' stroke-width='2'/>
+<text x='126' y='149' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>a</text>
+<rect x='148' y='128' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#0F7A55' stroke-width='2'/>
+<text x='164' y='149' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>b</text>
+<rect x='186' y='128' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#0F7A55' stroke-width='2'/>
+<text x='202' y='149' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>c</text>
+<rect x='98' y='230' width='134' height='66' rx='8' fill='#E4EEF9' stroke='#2E6FB7' stroke-width='2'/>
+<text x='165.0' y='222' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#2E6FB7' font-weight='bold' text-anchor='middle'>previous</text>
+<rect x='110' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='126' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>x</text>
+<rect x='148' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='164' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>y</text>
+<rect x='186' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='202' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>z</text>
+<rect x='408' y='110' width='134' height='66' rx='8' fill='#E3F2EB' stroke='#0F7A55' stroke-width='2'/>
+<text x='475.0' y='102' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#0F7A55' font-weight='bold' text-anchor='middle'>current</text>
+<rect x='420' y='128' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#0F7A55' stroke-width='2'/>
+<text x='436' y='149' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>d</text>
+<rect x='408' y='230' width='134' height='66' rx='8' fill='#E4EEF9' stroke='#2E6FB7' stroke-width='2'/>
+<text x='475.0' y='222' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#2E6FB7' font-weight='bold' text-anchor='middle'>previous (was current)</text>
+<rect x='420' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='436' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>a</text>
+<rect x='458' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='474' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>b</text>
+<rect x='496' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='512' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>c</text>
+<rect x='408' y='350' width='134' height='66' rx='8' fill='#F2F2F2' stroke='#9AA3AD' stroke-width='2' stroke-dasharray='6 4'/>
+<text x='475.0' y='342' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#6B7683' font-weight='bold' text-anchor='middle'>dropped</text>
+<rect x='420' y='368' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#9AA3AD' stroke-width='2'/>
+<text x='436' y='389' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#6B7683' font-weight='bold' text-anchor='middle'>x</text>
+<line x1='424' y1='396' x2='448' y2='372' stroke='#9AA3AD' stroke-width='2'/>
+<rect x='458' y='368' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#9AA3AD' stroke-width='2'/>
+<text x='474' y='389' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#6B7683' font-weight='bold' text-anchor='middle'>y</text>
+<line x1='462' y1='396' x2='486' y2='372' stroke='#9AA3AD' stroke-width='2'/>
+<rect x='496' y='368' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#9AA3AD' stroke-width='2'/>
+<text x='512' y='389' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#6B7683' font-weight='bold' text-anchor='middle'>z</text>
+<line x1='500' y1='396' x2='524' y2='372' stroke='#9AA3AD' stroke-width='2'/>
+<rect x='718' y='110' width='134' height='66' rx='8' fill='#E3F2EB' stroke='#0F7A55' stroke-width='2'/>
+<text x='785.0' y='102' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#0F7A55' font-weight='bold' text-anchor='middle'>current</text>
+<rect x='730' y='128' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#0F7A55' stroke-width='2'/>
+<text x='746' y='149' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>d</text>
+<rect x='768' y='128' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#0F7A55' stroke-width='2'/>
+<text x='784' y='149' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>b</text>
+<rect x='718' y='230' width='134' height='66' rx='8' fill='#E4EEF9' stroke='#2E6FB7' stroke-width='2'/>
+<text x='785.0' y='222' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#2E6FB7' font-weight='bold' text-anchor='middle'>previous</text>
+<rect x='730' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='746' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>a</text>
+<rect x='768' y='248' width='32' height='32' rx='6' fill='#FFFFFF' stroke='#2E6FB7' stroke-width='2'/>
+<text x='784' y='269' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='16' fill='#14181D' font-weight='bold' text-anchor='middle'>c</text>
+<path d='M 852 263 C 880 250, 880 190, 856 180' fill='none' stroke='#0F7A55' stroke-width='2.5' marker-end='url(#a)'/>
+<text x='894' y='222' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#0F7A55' font-weight='bold' text-anchor='start'>b moved</text>
+<text x='894' y='238' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#0F7A55' font-weight='bold' text-anchor='start'>back</text>
+<line x1='322' y1='190' x2='352' y2='190' stroke='#3D4650' stroke-width='2.5' marker-end='url(#a)'/>
+<line x1='632' y1='190' x2='662' y2='190' stroke='#3D4650' stroke-width='2.5' marker-end='url(#a)'/>
+<text x='470' y='455' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#3D4650' font-weight='normal' text-anchor='middle'>The last cap keys used are always present; up to 2 x cap may be. Each flip is counted: that count is the sizing signal.</text>
+</svg>

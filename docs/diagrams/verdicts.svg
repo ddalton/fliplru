@@ -1,0 +1,62 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 480' width='900' height='480' role='img' aria-label='What each verdict looks like'>
+<title>What each verdict looks like</title>
+<rect width='900' height='480' fill='#FFFFFF'/>
+<defs><marker id='a' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto'><path d='M0,0 L10,5 L0,10 z' fill='#3D4650'/></marker></defs>
+<text x='450' y='32' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='20' fill='#14181D' font-weight='bold' text-anchor='middle'>What each verdict looks like: hit ratio at other capacities</text>
+<line x1='90' y1='400.0' x2='610' y2='400.0' stroke='#E6E9EC' stroke-width='1'/>
+<text x='80' y='405.0' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#6B7683' font-weight='normal' text-anchor='end'>0%</text>
+<line x1='90' y1='317.5' x2='610' y2='317.5' stroke='#E6E9EC' stroke-width='1'/>
+<text x='80' y='322.5' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#6B7683' font-weight='normal' text-anchor='end'>25%</text>
+<line x1='90' y1='235.0' x2='610' y2='235.0' stroke='#E6E9EC' stroke-width='1'/>
+<text x='80' y='240.0' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#6B7683' font-weight='normal' text-anchor='end'>50%</text>
+<line x1='90' y1='152.5' x2='610' y2='152.5' stroke='#E6E9EC' stroke-width='1'/>
+<text x='80' y='157.5' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#6B7683' font-weight='normal' text-anchor='end'>75%</text>
+<line x1='90' y1='70.0' x2='610' y2='70.0' stroke='#E6E9EC' stroke-width='1'/>
+<text x='80' y='75.0' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#6B7683' font-weight='normal' text-anchor='end'>100%</text>
+<text x='90.0' y='424' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#3D4650' font-weight='normal' text-anchor='middle'>cap / 2</text>
+<text x='263.33333333333337' y='424' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#14181D' font-weight='bold' text-anchor='middle'>cap (verdict here)</text>
+<text x='436.6666666666667' y='424' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#3D4650' font-weight='normal' text-anchor='middle'>2 x cap</text>
+<text x='610.0' y='424' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#3D4650' font-weight='normal' text-anchor='middle'>4 x cap</text>
+<line x1='263.33333333333337' y1='70' x2='263.33333333333337' y2='400' stroke='#14181D' stroke-width='1.5' stroke-dasharray='4 4'/>
+<polyline points='90.0,268.66 263.33333333333337,72.63999999999999 436.6666666666667,72.63999999999999 610.0,72.63999999999999' fill='none' stroke='#0F7A55' stroke-width='3'/>
+<circle cx='90.0' cy='268.66' r='4.5' fill='#0F7A55'/>
+<circle cx='263.33333333333337' cy='72.63999999999999' r='4.5' fill='#0F7A55'/>
+<circle cx='436.6666666666667' cy='72.63999999999999' r='4.5' fill='#0F7A55'/>
+<circle cx='610.0' cy='72.63999999999999' r='4.5' fill='#0F7A55'/>
+<line x1='650' y1='100' x2='676' y2='100' stroke='#0F7A55' stroke-width='3'/>
+<text x='686' y='105' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#0F7A55' font-weight='bold' text-anchor='start'>Oversized</text>
+<text x='686' y='123' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#3D4650' font-weight='normal' text-anchor='start'>8,000 keys in rotation</text>
+<polyline points='90.0,174.93999999999997 263.33333333333337,151.18 436.6666666666667,127.42000000000002 610.0,106.30000000000001' fill='none' stroke='#2E6FB7' stroke-width='3'/>
+<circle cx='90.0' cy='174.93999999999997' r='4.5' fill='#2E6FB7'/>
+<circle cx='263.33333333333337' cy='151.18' r='4.5' fill='#2E6FB7'/>
+<circle cx='436.6666666666667' cy='127.42000000000002' r='4.5' fill='#2E6FB7'/>
+<circle cx='610.0' cy='106.30000000000001' r='4.5' fill='#2E6FB7'/>
+<line x1='650' y1='162' x2='676' y2='162' stroke='#2E6FB7' stroke-width='3'/>
+<text x='686' y='167' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#2E6FB7' font-weight='bold' text-anchor='start'>Fits</text>
+<text x='686' y='185' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#3D4650' font-weight='normal' text-anchor='start'>Zipf 0.99, 100,000 keys</text>
+<polyline points='90.0,400.0 263.33333333333337,138.64 436.6666666666667,73.95999999999998 610.0,73.95999999999998' fill='none' stroke='#B7791F' stroke-width='3'/>
+<circle cx='90.0' cy='400.0' r='4.5' fill='#B7791F'/>
+<circle cx='263.33333333333337' cy='138.64' r='4.5' fill='#B7791F'/>
+<circle cx='436.6666666666667' cy='73.95999999999998' r='4.5' fill='#B7791F'/>
+<circle cx='610.0' cy='73.95999999999998' r='4.5' fill='#B7791F'/>
+<line x1='650' y1='224' x2='676' y2='224' stroke='#B7791F' stroke-width='3'/>
+<text x='686' y='229' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#B7791F' font-weight='bold' text-anchor='start'>TooSmall</text>
+<text x='686' y='247' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#3D4650' font-weight='normal' text-anchor='start'>12,000 keys in rotation</text>
+<polyline points='90.0,352.15 263.33333333333337,307.6 436.6666666666667,228.07 610.0,113.88999999999999' fill='none' stroke='#8C2449' stroke-width='3'/>
+<circle cx='90.0' cy='352.15' r='4.5' fill='#8C2449'/>
+<circle cx='263.33333333333337' cy='307.6' r='4.5' fill='#8C2449'/>
+<circle cx='436.6666666666667' cy='228.07' r='4.5' fill='#8C2449'/>
+<circle cx='610.0' cy='113.88999999999999' r='4.5' fill='#8C2449'/>
+<line x1='650' y1='286' x2='676' y2='286' stroke='#8C2449' stroke-width='3'/>
+<text x='686' y='291' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#8C2449' font-weight='bold' text-anchor='start'>MuchTooSmall</text>
+<text x='686' y='309' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#3D4650' font-weight='normal' text-anchor='start'>50,000 keys at random</text>
+<polyline points='90.0,387.46 263.33333333333337,375.58 436.6666666666667,352.48 610.0,309.25' fill='none' stroke='#6B7683' stroke-width='3'/>
+<circle cx='90.0' cy='387.46' r='4.5' fill='#6B7683'/>
+<circle cx='263.33333333333337' cy='375.58' r='4.5' fill='#6B7683'/>
+<circle cx='436.6666666666667' cy='352.48' r='4.5' fill='#6B7683'/>
+<circle cx='610.0' cy='309.25' r='4.5' fill='#6B7683'/>
+<line x1='650' y1='348' x2='676' y2='348' stroke='#6B7683' stroke-width='3'/>
+<text x='686' y='353' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='15' fill='#6B7683' font-weight='bold' text-anchor='start'>Thrashing</text>
+<text x='686' y='371' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='12' fill='#3D4650' font-weight='normal' text-anchor='start'>200,000 keys at random</text>
+<text x='450' y='452' font-family='-apple-system,Segoe UI,Helvetica,Arial,sans-serif' font-size='13' fill='#3D4650' font-weight='normal' text-anchor='middle'>Flat to the right of cap: a bigger cache gains little (Oversized, Fits). Steep: it is too small. Low at every size: Thrashing.</text>
+</svg>
