@@ -1,15 +1,20 @@
 [package]
-name = "benches"
-version = "0.1.0"
+name = "fliplru-bench"
+version = "0.0.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+publish = false
+description = "fliplru against other LRU caches: speed and hit ratio (stable Rust: cargo run --release)"
 
 [dependencies]
-
 fliplru = { path = ".." }
-hashlru = "0.11.0"
-lru = "0.9"
-caches = "0.2"
-fast-lru = "0.1.2"
-lru-cache = "0.1.2"
+fliplru_016 = { package = "fliplru", version = "=0.1.6" }
+lru = "0.18"
+hashlink = "0.12"
+schnellru = "0.2"
+quick_cache = "0.7"
+rustc-hash = "2"
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = "fat"

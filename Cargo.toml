@@ -1,17 +1,19 @@
 [package]
 name = "fliplru"
-version = "0.1.6"
+version = "0.2.0"
 edition = "2021"
-description = "A LRU cache that shows effectiveness of cache capacity"
+rust-version = "1.85"
+description = "A fast LRU cache with a built-in signal for sizing it"
 license = "MIT"
-keywords = ["lru", "cache"]
+keywords = ["lru", "cache", "lru-cache", "caching", "no-std"]
 documentation = "https://docs.rs/fliplru"
 repository = "https://github.com/ddalton/fliplru.git"
 homepage = "https://github.com/ddalton/fliplru"
+exclude = ["bench/"]
 categories = ["data-structures", "caching", "development-tools::profiling", "no-std"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hashbrown = "0.14.0"
+hashbrown = "0.17"
 polonius-the-crab = "0.3.1"

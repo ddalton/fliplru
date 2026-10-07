@@ -1,84 +1,148 @@
 # fliplru
 
-[flip LRU](https://github.com/ddalton/fliplru) is a LRU cache that has some profiling built-in to help tune the cache capacity.
+[![crates.io](https://img.shields.io/crates/v/fliplru.svg)](https://crates.io/crates/fliplru)
+[![docs.rs](https://docs.rs/fliplru/badge.svg)](https://docs.rs/fliplru)
 
-The goals of this cache data structure are two-fold:
-1. The get API should be fast with low overhead as it is the main API of a cache.
-2. Expose some profiling metrics to help with deciding on the appropriate capacity.
+A fast LRU cache for Rust with a built-in signal for sizing it. `no_std`, safe Rust, one
+dependency (hashbrown).
 
-There is another goal but it is implementation related and I didn't want to use a linked list.
+```rust
+use fliplru::LruCache;
+use std::num::NonZeroUsize;
 
-The implementation is based on 2 hashmaps to provide the LRU functionality. So the total capacity of this cache is `2*cap` LRU items.
-The `cap` LRU items are guaranteed to be in the cache. The `cap+1` to `2*cap` LRU items maybe in the cache, but this is not guaranteed.
+let mut cache = LruCache::new(NonZeroUsize::new(1000).unwrap());
+cache.put("apple", 3);
+assert_eq!(cache.get(&"apple"), Some(&3));
 
-The hashbrown map is used along with the 2 cache design to provide a fast get API.
+// read-through: compute the value only on a miss
+let price = *cache.get_or_insert_with("pear", || 5);
 
-A flips metric is exposed to help tune the cache capacity. Flips represent the number of times the cache capacity is reached. It empties the cache and refills it in a way the performance is not affected (see benchmarks below).
-If the flips count is 0, then the cache is oversized. If the flip count is very high and close to the number of accesses/capacity then the cache is not being used effectively and the capacity has to be increased.
-
-The API has been inspired by [lru](https://crates.io/crates/lru) by [Jerome Froelich](https://github.com/jeromefroe). 
-
-## Find if cache capacity is too small for use case
-Below is example of a check to find if the cache has been configured with less capacity.
-In this example the cache is accessed for 20 times and the flip count is 8 for a cache capacity of 2. This indicates there is no caching occurring for the access pattern.
-
-```
-let mut cache = LruCache::new(NonZeroUsize::new(2).unwrap());
-for i in 0..5 {
-    cache.put(i, i);
-}
-for i in 0..20 {
-    cache.get(&(i % 5));
-}
-
-assert_eq!(cache.get_flips(), 8);
+// is 1000 the right size? see "Sizing the cache" below
+println!("flips so far: {}", cache.get_flips());
 ```
 
-## Find if cache capacity is too large for use case
-Below is example of a check to find if the cache has been configured with more than enough capacity.
-In this example the cache is accessed for 20 times and the number of flips is 0 for a cache capacity of 5. This indicates the cache fully satisfies every access made.
+## How it works
 
-```
-let mut cache = LruCache::new(NonZeroUsize::new(5).unwrap());
-for i in 0..5 {
-    cache.put(i, i);
-}
-for i in 0..20 {
-    cache.get(&(i % 5));
-}
+fliplru keeps two hash maps: the **current** generation and the **previous** one. Keys you
+put or use live in the current generation. When it reaches `cap` entries, the cache
+**flips**: the current generation becomes the previous one, the old previous generation is
+dropped, and a new, empty current generation starts. A key found in the previous
+generation is moved back to the current one, so anything still in use survives the next
+flip.
 
-assert_eq!(cache.get_flips(), 0);
-```
+That gives:
 
-# Status
+- **A fast `get`**: one hash lookup when the key is in the current generation. Every
+  operation hashes the key once.
+- **A guarantee**: the last `cap` distinct keys used are always in the cache.
+- **A memory cost**: up to `2 * cap` entries can be held (both generations), so plan for
+  `2 * cap`.
+- **A sizing signal**: the number of flips.
 
-It is a basic LRU cache with metrics to help with cache capacity tuning. Provides a fast get API.
+## Sizing the cache
 
-# Benchmarks
+`get_flips()` counts how often the current generation filled up. Compare it with the
+number of accesses:
 
-The benchmarks has been inspired by [HashLRU](https://gitlab.com/liberecofr/hashlru) by Christian Mauduit
+| flips | what it means |
+|---|---|
+| 0 | everything you use fits: the cache may be bigger than it needs to be |
+| close to `accesses / cap` | almost nothing is used twice before it is dropped: the cache is too small to help |
+| in between | the cache is working; fewer flips per access means more reuse |
 
-Benchmark comparisons of the get API using various caches implementations configured with 100000 capacity. This was run on a 2020 MacBook Air.
+```rust
+use fliplru::LruCache;
+use std::num::NonZeroUsize;
 
-```
-running 8 tests
-test tests::bench_read_usize_builtin_hashmap    ... bench:          16 ns/iter (+/- 0)
-test tests::bench_read_usize_caches             ... bench:          37 ns/iter (+/- 16)
-test tests::bench_read_usize_fastlru            ... bench:          48 ns/iter (+/- 7)
-test tests::bench_read_usize_fliplru            ... bench:           7 ns/iter (+/- 0)
-test tests::bench_read_usize_hashlru_cache      ... bench:          10 ns/iter (+/- 1)
-test tests::bench_read_usize_hashlru_sync_cache ... bench:          15 ns/iter (+/- 0)
-test tests::bench_read_usize_lru                ... bench:          10 ns/iter (+/- 0)
-test tests::bench_read_usize_lru_cache          ... bench:          38 ns/iter (+/- 0)
+// 5 keys used round-robin, cache of 2: every access misses, and the flips say so
+let mut small = LruCache::new(NonZeroUsize::new(2).unwrap());
+for i in 0..20 { small.get_or_insert_with(i % 5, || i); }
+assert_eq!(small.get_flips(), 9);
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 8 measured; 0 filtered out; finished in 14.09s
-```
-
-To run the benchmarks:
-
-```shell
-cd bench
-rustup default nightly
-cargo bench
+// a cache of 5: everything fits, no flips
+let mut big = LruCache::new(NonZeroUsize::new(5).unwrap());
+for i in 0..20 { big.get_or_insert_with(i % 5, || i); }
+assert_eq!(big.get_flips(), 0);
 ```
 
+Use `reset()` to start counting again, for example once per reporting period.
+
+## API
+
+| method | |
+|---|---|
+| `new(cap)` | a cache keeping at least the last `cap` keys |
+| `with_hasher(cap, hasher)` | the same, with your own hasher (see below) |
+| `get(&k)`, `get_mut(&k)` | the value, if present (a key found in the previous generation moves to the current one, so these take `&mut self`) |
+| `put(k, v)` | insert or update; returns the old value |
+| `get_or_insert_with(k, f)` | read-through: the value, inserting `f()` first on a miss; one hash instead of a `get` plus a `put` |
+| `get_or_insert_with_ref(&q, f)` | the same, looking up by reference: for `String` keys pass a `&str`, and no `String` is built on a hit |
+| `get_flips()`, `reset()` | the sizing signal |
+| `len()`, `is_empty()`, `cap()` | |
+
+**Choosing a hasher.** The default is hashbrown's (foldhash), which is fast and resists
+collision attacks. For integer keys you control, an Fx hasher (the `rustc-hash` crate) is
+faster still:
+
+```rust
+use fliplru::LruCache;
+use std::num::NonZeroUsize;
+
+let mut cache: LruCache<u64, String, rustc_hash::FxBuildHasher> =
+    LruCache::with_hasher(NonZeroUsize::new(1000).unwrap(), rustc_hash::FxBuildHasher);
+```
+
+fliplru is single-threaded (`&mut self` methods). To share one across threads, put it
+behind a `Mutex`.
+
+## Performance
+
+From `bench/` (stable Rust: `cd bench && cargo run --release`), on an Apple M1, cap
+100,000. Every cache runs each workload in every round, in an order that rotates between
+rounds, and the median of 9 rounds is shown. Read-throughs use each crate's own best
+method. Hit ratios are next to the times, since a cache that misses more does different
+work.
+
+**Speed, ns per operation (hit ratio)**
+
+| cache | get (all hits) | put | Zipf, integer keys | Zipf, String keys | loop, String keys |
+|---|---:|---:|---:|---:|---:|
+| **fliplru** | 7.1 | **16.3** | 15.4 (79%) | 90.2 (78%) | 84.7 (49%) |
+| **fliplru + Fx hasher** | **5.3** | **6.0** | **14.2** (79%) | 90.3 (78%) | 85.2 (49%) |
+| fliplru 0.1.6 | 7.3 | 20.1 | 21.3 (79%) | 95.2 (78%) | 141.2 (49%) |
+| lru 0.18 | 8.7 | 36.5 | 16.7 (76%) | 102.1 (76%) | 106.4 (0%) |
+| hashlink 0.12 | 8.7 | 33.1 | 16.2 (76%) | 94.8 (76%) | 96.5 (0%) |
+| schnellru 0.2 | 7.3 | 25.5 | 14.8 (76%) | 82.2 (76%) | 100.8 (0%) |
+| quick_cache 0.7 (S3-FIFO) | 7.7 | 31.2 | 19.9 (79%) | 87.7 (79%) | **74.9** (48%) |
+
+- **Zipf**: requests over 1M keys where a few are very popular, read-through on a cache of
+  100,000. **Loop**: keys cycling through 1.5 x cap, where a classic LRU misses every
+  request.
+- fliplru is fastest on puts and, with the Fx hasher, on gets. On Zipf traffic fliplru,
+  schnellru and hashlink are within noise of each other with integer keys, and the top
+  three are within noise with String keys: that column changes order from run to run
+  (fliplru has measured 74-92 ns there). Expect about ±10% between runs on a laptop.
+
+**Hit ratio at equal memory** (each cache holds at most 200,000 entries; fliplru, which
+holds up to `2 * cap`, gets cap 100,000)
+
+| cache | Zipf 0.99 | Zipf 0.7 | Zipf + scans | loop |
+|---|---:|---:|---:|---:|
+| fliplru | 78.7% | 41.0% | 20.3% | 0.0% |
+| lru 0.18 | 82.0% | 48.1% | 20.3% | 0.0% |
+| schnellru 0.2 | 82.0% | 48.1% | 20.3% | 0.0% |
+| quick_cache 0.7 (S3-FIFO) | **83.5%** | **53.8%** | **25.0%** | **67.6%** |
+
+At equal memory fliplru keeps fewer useful keys than a classic LRU: a flip drops a whole
+generation at once, where an LRU drops one key at a time. And like any LRU it is not scan
+resistant. If hit ratio matters more than speed and the sizing signal, use
+[quick_cache](https://crates.io/crates/quick_cache) (S3-FIFO) or
+[moka](https://crates.io/crates/moka) (W-TinyLFU, concurrent).
+
+## Minimum Rust version
+
+1.85 (from hashbrown 0.17).
+
+## License
+
+MIT
