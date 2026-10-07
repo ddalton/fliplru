@@ -1,11 +1,15 @@
-# Is your cache the right size? fliplru 0.3 can tell you
-
+---
+title: "Is your cache the right size? fliplru can tell you"
+published: false
+description: "A two-generation LRU cache for Rust that counts its own flips and promotions, and turns them into a verdict on its capacity."
+tags: rust, performance, caching, opensource
+---
 Every cache has a capacity, and almost every capacity is a guess. Too small and the cache
 thrashes: entries are evicted just before they are needed again. Too large and you pay
 memory for nothing. Most LRU caches give you no way to tell which one you have.
 
 [fliplru](https://crates.io/crates/fliplru) is a small, fast LRU cache for Rust, `no_std`
-and safe, that measures its own fit. Version 0.3 turns that measurement into a verdict:
+and safe, that measures its own fit and turns that measurement into a verdict:
 
 ```rust
 use fliplru::{LruCache, Sizing};
@@ -36,7 +40,7 @@ current generation becomes the previous one, the old previous generation is drop
 empty current generation begins. A lookup that finds its key in the previous generation
 moves it back into the current one, so anything still in use survives the next flip.
 
-![How a flip works: the full current generation becomes the previous one, the old previous one is dropped, and a key found in the previous generation moves back](diagrams/flip.svg)
+![How a flip works: the full current generation becomes the previous one, the old previous one is dropped, and a key found in the previous generation moves back](https://raw.githubusercontent.com/ddalton/fliplru/main/docs/diagrams/flip.png)
 
 The design is old (the JavaScript `hashlru` package works the same way), and it has three
 useful properties:
@@ -50,7 +54,7 @@ useful properties:
 
 ## From a flip count to a verdict
 
-The flip count alone already tells you a lot, but 0.3 adds the numbers around it:
+The flip count alone already tells you a lot, and `stats()` adds the numbers around it:
 
 | counter | what it is |
 |---|---|
@@ -66,7 +70,7 @@ capacity, and a modest increase would turn those lucky hits into reliable ones. 
 conventional LRU can report this, because it has no second generation to catch the near
 misses.
 
-![One lookup: a hit in the current generation, a promotion from the previous one, or a miss, and the counter each one bumps](diagrams/lookup.svg)
+![One lookup: a hit in the current generation, a promotion from the previous one, or a miss, and the counter each one bumps](https://raw.githubusercontent.com/ddalton/fliplru/main/docs/diagrams/lookup.png)
 
 `stats().sizing()` combines these into one of six verdicts. The rules are simple:
 
@@ -85,7 +89,7 @@ truth. I ran each test workload at the chosen capacity, then again at half, doub
 times that capacity. If halving costs nothing, the cache was oversized. If doubling gains a
 lot, it was too small. If doubling gains little, it fits.
 
-![Hit ratio at half, one, two and four times the capacity for one workload per verdict](diagrams/verdicts.svg)
+![Hit ratio at half, one, two and four times the capacity for one workload per verdict](https://raw.githubusercontent.com/ddalton/fliplru/main/docs/diagrams/verdicts.png)
 
 The test set was 21 scenarios:
 
@@ -109,13 +113,12 @@ little"), when it really needed about four times the capacity. That is why there
 "too small" verdicts. With the split, all 21 scenarios get the right verdict at all three
 capacities. One case per verdict is now a test in the crate.
 
-The counters are plain integers updated as the cache runs. Measured against 0.2, they cost
-nothing measurable on lookups and about 0.4 ns per `put`.
+The counters are plain integers updated as the cache runs. They cost nothing measurable on
+lookups and about 0.4 ns per `put`.
 
 ## How fast is it?
 
-Speed got a lot of attention in 0.2. Here is fliplru against the most-used LRU crates on an
-Apple M1, with a capacity of 100,000 and times in nanoseconds per operation:
+Here is fliplru against the most-used LRU crates on an Apple M1, with a capacity of 100,000 and times in nanoseconds per operation:
 
 | cache | get (all hits) | put | Zipf, integer keys | loop, String keys |
 |---|---:|---:|---:|---:|
@@ -125,9 +128,9 @@ Apple M1, with a capacity of 100,000 and times in nanoseconds per operation:
 | schnellru 0.2 | 7.3 | 25.5 | 14.8 | 100.8 (every request misses) |
 | quick_cache 0.7 | 7.7 | 31.2 | 19.9 | 74.9 |
 
-Read-throughs use each crate's own best "get or insert" method. These numbers were
-measured on 0.2; the counters added in 0.3 cost about 0.4 ns per `put`. fliplru is clearly fastest
-on puts, and on gets with a faster hasher. On realistic read traffic it is level with the
+Read-throughs use each crate's own best "get or insert" method. fliplru was measured
+before the counters were added; they add about 0.4 ns to each `put`. fliplru is clearly
+fastest on puts, and on gets with a faster hasher. On realistic read traffic it is level with the
 best; with String keys, the top three trade places from run to run.
 
 That is also where I will be careful. **Speed is not the main reason to choose fliplru.**
@@ -142,14 +145,14 @@ So fliplru fits best where operations are very frequent and misses are cheap (me
 small computations, interning, write-heavy caches), or wherever you want the cache to tell
 you whether it is the right size.
 
-## What made 0.2 faster, and what didn't work
+## What made it fast, and what didn't work
 
 The optimizations that paid off:
 
-- **Hashing once.** The two generations are now hashbrown `HashTable`s sharing one hasher.
+- **Hashing once.** The two generations are hashbrown `HashTable`s sharing one hasher.
   A key is hashed once per operation, and that hash is reused for every probe and insert.
-- **Fewer table operations on a promotion.** Moving a key from the previous generation used
-  to take four lookups; now it takes two.
+- **Fewer table operations on a promotion.** Moving a key back from the previous generation
+  takes two table operations, where the straightforward version takes four.
 - **Flips that reuse memory.** A flip clears the retired table rather than allocating a new
   one.
 - **Read-through methods.** `get_or_insert_with` does a lookup and a fill-on-miss with one
