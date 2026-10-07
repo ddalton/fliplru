@@ -10,7 +10,8 @@
 //!   operation hashes the key once.
 //! - **The last `cap` distinct keys used are always in the cache.** Up to `2 * cap` may be
 //!   (the previous generation too), so plan memory for `2 * cap` entries.
-//! - **Flips tell you whether `cap` fits your workload** ([`LruCache::get_flips`]):
+//! - **[`LruCache::stats`] tells you whether `cap` fits your workload**: hits, misses, flips
+//!   and a verdict ([`Sizing`]). The flip count alone ([`LruCache::get_flips`]) says:
 //!   - no flips: everything you use fits — the cache may be larger than it needs to be;
 //!   - flips close to `accesses / cap`: almost nothing is reused before it is dropped —
 //!     the cache is too small to help;
@@ -83,6 +84,18 @@ pub struct LruCache<K, V, S = DefaultHashBuilder> {
     hasher: S,
     cap: NonZeroUsize,
     flips: usize,
+    counters: Counters,
+    peak_entries: usize,
+}
+
+/// Lookup and insert counts, kept as the cache runs (see [`LruCache::stats`]).
+#[derive(Clone, Copy, Debug, Default)]
+struct Counters {
+    hits: u64,
+    promotions: u64,
+    misses: u64,
+    inserts: u64,
+    updates: u64,
 }
 
 impl<K: Hash + Eq, V> LruCache<K, V> {
@@ -129,6 +142,8 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
             hasher,
             cap,
             flips: 0,
+            counters: Counters::default(),
+            peak_entries: 0,
         }
     }
 
@@ -142,12 +157,23 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
         let mut this = self;
         polonius!(|this| -> Option<&'polonius mut (K, V)> {
             if let Some(e) = this.l1_map.find_mut(hash, |e| e.0.borrow() == k) {
+                this.counters.hits += 1;
                 polonius_return!(Some(e));
             }
         });
         // In the backup map: after the removal the key is in neither map, so it is inserted
         // once, with the hash already computed.
-        let ((rk, rv), _) = this.l2_map.find_entry(hash, |e| e.0.borrow() == k).ok()?.remove();
+        let entries = this.l1_map.len() + this.l2_map.len();
+        let Ok(o) = this.l2_map.find_entry(hash, |e| e.0.borrow() == k) else {
+            this.counters.misses += 1;
+            return None;
+        };
+        this.counters.promotions += 1;
+        if this.l1_map.len() == this.cap.get() {
+            // this promotion will flip the cache, after the removal: record the peak first
+            this.peak_entries = cmp::max(this.peak_entries, entries);
+        }
+        let ((rk, rv), _) = o.remove();
         this.flip_if_full();
         let hasher = &this.hasher;
         Some(
@@ -243,6 +269,7 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
         // A miss: the key is in neither map (also after a flip, whose backup is the cache
         // that did not have it).
         this.flip_if_full();
+        this.note_insert();
         let hasher = &this.hasher;
         &mut this
             .l1_map
@@ -279,6 +306,7 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
             }
         });
         this.flip_if_full();
+        this.note_insert();
         let hasher = &this.hasher;
         &mut this
             .l1_map
@@ -316,12 +344,26 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
         };
         let hasher = &self.hasher;
         match self.l1_map.entry(hash, |e| e.0 == k, |e| hasher.hash_one(&e.0)) {
-            Entry::Occupied(mut o) => Some(mem::replace(&mut o.get_mut().1, v)),
+            Entry::Occupied(mut o) => {
+                self.counters.updates += 1;
+                Some(mem::replace(&mut o.get_mut().1, v))
+            }
             Entry::Vacant(e) => {
                 e.insert((k, v));
+                if ov.is_some() {
+                    self.counters.updates += 1; // it was in the previous generation
+                } else {
+                    self.counters.inserts += 1;
+                }
                 ov
             }
         }
+    }
+
+    /// A new key is about to go into the current generation (a read-through's miss).
+    #[inline]
+    fn note_insert(&mut self) {
+        self.counters.inserts += 1;
     }
 
     /// When the cache is full, flip: the full map becomes the backup and the old backup,
@@ -329,6 +371,10 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
     #[inline]
     fn flip_if_full(&mut self) {
         if self.l1_map.len() == self.cap.get() {
+            // Entries only grow between flips (an insert adds one, a promotion moves one), so
+            // their peak is reached just before a flip, or is the count now: recorded here and
+            // in stats(), not on every insert.
+            self.peak_entries = cmp::max(self.peak_entries, self.l1_map.len() + self.l2_map.len());
             mem::swap(&mut self.l2_map, &mut self.l1_map);
             self.l1_map.clear();
             self.flips += 1;
@@ -415,8 +461,9 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
         self.flips
     }
 
-    /// Resets the flip count to zero (the cache's contents are unchanged), to measure a new
-    /// period.
+    /// Resets the flip count and every counter in [`LruCache::stats`] to zero, to measure a
+    /// new period (the cache's contents are unchanged; `peak_entries` restarts from the
+    /// entries held now).
     ///
     /// # Example
     ///
@@ -437,7 +484,161 @@ impl<K: Hash + Eq, V, S: BuildHasher> LruCache<K, V, S> {
     /// ```
     pub fn reset(&mut self) {
         self.flips = 0;
+        self.counters = Counters::default();
+        self.peak_entries = self.l1_map.len() + self.l2_map.len();
     }
+
+    /// Returns what the cache has done since it was created or [`LruCache::reset`]: hits,
+    /// misses, flips, the memory it actually needed, and a verdict on its capacity
+    /// ([`Stats::sizing`]).
+    ///
+    /// The counters are plain integers kept as the cache runs; reading them costs nothing.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use fliplru::{LruCache, Sizing};
+    /// use std::num::NonZeroUsize;
+    ///
+    /// // 50 keys in rotation through a cache of 100: everything fits
+    /// let mut cache = LruCache::new(NonZeroUsize::new(100).unwrap());
+    /// for i in 0..10_000 {
+    ///     cache.get_or_insert_with(i % 50, || i);
+    /// }
+    /// let stats = cache.stats();
+    /// assert_eq!(stats.misses, 50); // the first time each key was seen
+    /// assert_eq!(stats.hit_ratio(), 0.995);
+    /// assert_eq!(stats.sizing(), Sizing::Oversized { needed: 50 });
+    /// ```
+    pub fn stats(&self) -> Stats {
+        let c = self.counters;
+        Stats {
+            hits: c.hits,
+            promotions: c.promotions,
+            misses: c.misses,
+            inserts: c.inserts,
+            updates: c.updates,
+            flips: self.flips as u64,
+            entries: self.l1_map.len() + self.l2_map.len(),
+            peak_entries: cmp::max(self.peak_entries, self.l1_map.len() + self.l2_map.len()),
+            cap: self.cap.get(),
+        }
+    }
+}
+
+/// What a cache has done since it was created or reset: see [`LruCache::stats`].
+///
+/// Lookups are `get`, `get_mut` and the two `get_or_insert_with` methods; each is a hit, a
+/// promotion or a miss. `put` is not a lookup: it counts as an insert or an update.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Stats {
+    /// Lookups found in the current generation.
+    pub hits: u64,
+    /// Lookups found in the previous generation (moved back into the current one). These
+    /// are hits too, but they survived only because that generation had not been dropped
+    /// yet: many of them mean the keys in use slightly outnumber `cap`.
+    pub promotions: u64,
+    /// Lookups that found nothing.
+    pub misses: u64,
+    /// New keys added, by `put` or by a read-through's miss.
+    pub inserts: u64,
+    /// `put` calls on a key already in the cache.
+    pub updates: u64,
+    /// Flips: how often the current generation filled up.
+    pub flips: u64,
+    /// Entries held now, in both generations (up to `2 * cap`).
+    pub entries: usize,
+    /// The most entries ever held: the memory the workload actually needed.
+    pub peak_entries: usize,
+    /// The cache's capacity.
+    pub cap: usize,
+}
+
+impl Stats {
+    /// Hits, promotions and misses together.
+    pub fn lookups(&self) -> u64 {
+        self.hits + self.promotions + self.misses
+    }
+
+    /// The share of lookups that found their key (hits and promotions), from 0.0 to 1.0;
+    /// 0.0 before any lookup.
+    pub fn hit_ratio(&self) -> f64 {
+        match self.lookups() {
+            0 => 0.0,
+            n => (self.hits + self.promotions) as f64 / n as f64,
+        }
+    }
+
+    /// Flips per 1000 lookups. At most `1000 / cap` (every lookup a new key).
+    pub fn flips_per_1000_lookups(&self) -> f64 {
+        match self.lookups() {
+            0 => 0.0,
+            n => self.flips as f64 * 1000.0 / n as f64,
+        }
+    }
+
+    /// A verdict on the capacity, from these counts. See [`Sizing`] for what each means and
+    /// what to do.
+    pub fn sizing(&self) -> Sizing {
+        let lookups = self.lookups();
+        // a judgement needs the cache to have seen its working set a few times over
+        if lookups < 10 * self.cap as u64 {
+            return Sizing::NotEnoughData;
+        }
+        if self.flips == 0 {
+            return Sizing::Oversized { needed: self.peak_entries };
+        }
+        // Calibrated on fixed working sets from 0.3 to 20 x cap (in rotation and at random),
+        // Zipf traffic (skew 0.7 to 1.2, 1 to 100 x cap keys) and Zipf with scans, against the
+        // hit ratio the same trace gets at half, double and four times the capacity.
+        let hit_ratio = self.hit_ratio();
+        let hits = self.hits + self.promotions;
+        if hit_ratio < 0.1 {
+            Sizing::Thrashing
+        } else if self.promotions * 4 > hits {
+            // Many hits needed the previous generation. If they are nearly all such hits, every
+            // reuse falls between cap and 2 x cap, and a cap up to 2x captures them; otherwise a
+            // high hit ratio says the same.
+            if hit_ratio >= 0.5 || self.promotions * 10 >= hits * 9 {
+                Sizing::TooSmall
+            } else {
+                Sizing::MuchTooSmall
+            }
+        } else {
+            Sizing::Fits
+        }
+    }
+}
+
+/// A verdict on a cache's capacity, from [`Stats::sizing`].
+///
+/// New verdicts may be added, so a `match` needs a `_` arm.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Sizing {
+    /// Fewer than `10 * cap` lookups so far: too early to judge.
+    NotEnoughData,
+    /// The cache never filled up. `needed` entries (the most it ever held) would have been
+    /// enough: a cache of that size behaves the same and uses less memory.
+    Oversized {
+        /// The most entries the cache ever held.
+        needed: usize,
+    },
+    /// The cache fills up and turns over, and a bigger one would gain little: it is doing
+    /// what the workload allows (with one-off scans in the traffic, that may be few hits).
+    Fits,
+    /// Many hits relied on the previous generation not yet being dropped: the keys in use
+    /// somewhat outnumber `cap`. A larger cap, up to about twice the current one, would turn
+    /// those lucky hits into reliable ones.
+    TooSmall,
+    /// Many hits relied on the previous generation, and the hit ratio is low: the keys in use
+    /// outnumber `cap` several times over. A cap of a few times the current one would help a
+    /// lot; or the workload has a long tail of keys that rarely come back.
+    MuchTooSmall,
+    /// Fewer than one lookup in ten hits: almost nothing is used again before it is
+    /// dropped. Either the cache is far too small for the keys in use, or the access pattern
+    /// has little reuse to exploit.
+    Thrashing,
 }
 
 #[cfg(test)]

@@ -14,11 +14,18 @@ struct Model {
     previous: HashMap<u64, u64>,
     cap: usize,
     flips: usize,
+    // what stats() must report
+    hits: u64,
+    promotions: u64,
+    misses: u64,
+    inserts: u64,
+    updates: u64,
+    peak: usize,
 }
 
 impl Model {
     fn new(cap: usize) -> Model {
-        Model { current: HashMap::new(), previous: HashMap::new(), cap, flips: 0 }
+        Model { current: HashMap::new(), previous: HashMap::new(), cap, flips: 0, hits: 0, promotions: 0, misses: 0, inserts: 0, updates: 0, peak: 0 }
     }
     fn flip_if_full(&mut self) {
         if self.current.len() == self.cap {
@@ -26,11 +33,19 @@ impl Model {
             self.flips += 1;
         }
     }
+    fn entries(&self) -> usize {
+        self.current.len() + self.previous.len()
+    }
     fn get(&mut self, k: u64) -> Option<u64> {
         if let Some(&v) = self.current.get(&k) {
+            self.hits += 1;
             return Some(v);
         }
-        let v = self.previous.remove(&k)?;
+        let Some(v) = self.previous.remove(&k) else {
+            self.misses += 1;
+            return None;
+        };
+        self.promotions += 1;
         self.flip_if_full();
         self.current.insert(k, v);
         Some(v)
@@ -38,7 +53,14 @@ impl Model {
     fn put(&mut self, k: u64, v: u64) -> Option<u64> {
         self.flip_if_full();
         let old = self.previous.remove(&k);
-        self.current.insert(k, v).or(old)
+        let r = self.current.insert(k, v).or(old);
+        if r.is_some() {
+            self.updates += 1;
+        } else {
+            self.inserts += 1;
+        }
+        self.peak = self.peak.max(self.entries());
+        r
     }
     fn read(&mut self, k: u64, v: u64) -> u64 {
         match self.get(k) {
@@ -90,6 +112,12 @@ fn run<S: std::hash::BuildHasher>(mut cache: LruCache<u64, u64, S>, cap: usize, 
         }
         assert_eq!(cache.get_flips(), model.flips, "flips, cap {cap}, op {n}");
         assert_eq!(cache.len(), model.len(), "len, cap {cap}, op {n}");
+        let st = cache.stats();
+        assert_eq!(
+            (st.hits, st.promotions, st.misses, st.inserts, st.updates, st.flips, st.entries, st.peak_entries),
+            (model.hits, model.promotions, model.misses, model.inserts, model.updates, model.flips as u64, model.entries(), model.peak),
+            "stats (hits, promotions, misses, inserts, updates, flips, entries, peak), cap {cap}, op {n}"
+        );
     }
 }
 

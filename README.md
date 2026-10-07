@@ -18,7 +18,7 @@ assert_eq!(cache.get(&"apple"), Some(&3));
 let price = *cache.get_or_insert_with("pear", || 5);
 
 // is 1000 the right size? see "Sizing the cache" below
-println!("flips so far: {}", cache.get_flips());
+println!("{:?}", cache.stats().sizing());
 ```
 
 ## How it works
@@ -37,12 +37,44 @@ That gives:
 - **A guarantee**: the last `cap` distinct keys used are always in the cache.
 - **A memory cost**: up to `2 * cap` entries can be held (both generations), so plan for
   `2 * cap`.
-- **A sizing signal**: the number of flips.
+- **A sizing signal**: the number of flips, and the statistics around it (`stats()`).
 
 ## Sizing the cache
 
-`get_flips()` counts how often the current generation filled up. Compare it with the
-number of accesses:
+Run your workload, then ask the cache:
+
+```rust
+use fliplru::{LruCache, Sizing};
+use std::num::NonZeroUsize;
+
+let mut cache = LruCache::new(NonZeroUsize::new(100).unwrap());
+for i in 0..10_000 {
+    cache.get_or_insert_with(i % 50, || i); // 50 keys in use
+}
+let stats = cache.stats();
+println!("hit ratio {:.1}%, {} flips", stats.hit_ratio() * 100.0, stats.flips);
+match stats.sizing() {
+    Sizing::Oversized { needed } => println!("only {needed} entries were ever needed"),
+    Sizing::TooSmall => println!("hits depend on luck: up to 2x the capacity would fix it"),
+    Sizing::MuchTooSmall => println!("several times the capacity would help a lot"),
+    Sizing::Thrashing => println!("almost nothing is reused: far too small, or no reuse to find"),
+    Sizing::Fits => println!("a bigger cache would gain little"),
+    Sizing::NotEnoughData => println!("run longer"),
+    _ => {}
+}
+```
+
+`stats()` returns hits, **promotions** (hits on keys found in the previous generation: they
+survived only because it had not been dropped yet), misses, inserts, updates, flips, and the
+most entries ever held. Keeping these counts costs nothing measurable on lookups and about
+0.4 ns per `put`.
+
+The verdicts were calibrated on fixed working sets from 0.3 to 20 times the capacity,
+Zipf traffic and Zipf with scans, at capacities from 1,000 to 100,000, checking each verdict
+against the hit ratio the same traffic gets at half, double and four times the capacity
+(`tests/sizing.rs` keeps one case per verdict).
+
+The flip count alone tells the same story. Compare it with the number of accesses:
 
 | flips | what it means |
 |---|---|
@@ -77,7 +109,8 @@ Use `reset()` to start counting again, for example once per reporting period.
 | `put(k, v)` | insert or update; returns the old value |
 | `get_or_insert_with(k, f)` | read-through: the value, inserting `f()` first on a miss; one hash instead of a `get` plus a `put` |
 | `get_or_insert_with_ref(&q, f)` | the same, looking up by reference: for `String` keys pass a `&str`, and no `String` is built on a hit |
-| `get_flips()`, `reset()` | the sizing signal |
+| `stats()` | hits, promotions, misses, inserts, updates, flips, peak entries, and `sizing()`: a verdict on the capacity |
+| `get_flips()`, `reset()` | the flip count, and zeroing every counter |
 | `len()`, `is_empty()`, `cap()` | |
 
 **Choosing a hasher.** The default is hashbrown's (foldhash), which is fast and resists
