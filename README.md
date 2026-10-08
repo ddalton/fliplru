@@ -74,6 +74,9 @@ Zipf traffic and Zipf with scans, at capacities from 1,000 to 100,000, checking 
 against the hit ratio the same traffic gets at half, double and four times the capacity
 (`tests/sizing.rs` keeps one case per verdict).
 
+The whole story, with diagrams of a flip and of what each verdict looks like, is in the post
+[Is your cache the right size? fliplru can tell you](https://dev.to/ddalton/is-your-cache-the-right-size-fliplru-can-tell-you-58im).
+
 The flip count alone tells the same story. Compare it with the number of accesses:
 
 | flips | what it means |
