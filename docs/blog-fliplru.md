@@ -25,8 +25,8 @@ match stats.sizing() {
 }
 ```
 
-This post covers how that works, how the verdicts were checked, how fliplru compares with
-the popular LRU crates, and the optimizations that did and did not pay off.
+This post covers how that works, how the verdicts were checked, and how fliplru compares
+with the popular LRU crates.
 
 ## Two generations and a flip
 
@@ -145,19 +145,12 @@ It is also `no_std` and builds for bare-metal targets such as Cortex-M (it needs
 allocator). All of its memory is allocated when the cache is created, and flips reuse it, so
 it never allocates afterwards, which matters where heap fragmentation is a risk.
 
-## What made it fast, and what didn't work
+## Design notes
 
-The optimizations that paid off:
-
-- **Hashing once.** The two generations are hashbrown `HashTable`s sharing one hasher.
-  A key is hashed once per operation, and that hash is reused for every probe and insert.
-- **Fewer table operations on a promotion.** Moving a key back from the previous generation
-  takes two table operations, where the straightforward version takes four.
-- **Flips that reuse memory.** A flip clears the retired table rather than allocating a new
-  one.
-- **Read-through methods.** `get_or_insert_with` does a lookup and a fill-on-miss with one
-  hash, and `get_or_insert_with_ref` accepts a `&str` for `String` keys, so a hit builds no
-  owned key.
+Most of the speed comes from ordinary care: the two generations are hashbrown `HashTable`s
+sharing one hasher, so a key is hashed once per operation; a promotion takes two table
+operations; a flip reuses the retired table's memory; and `get_or_insert_with` does a
+read-through with a single hash.
 
 The fast path has one Rust-specific wrinkle. "Return the value if it is in the current
 generation, otherwise look in the previous one" is a known limitation of today's borrow
@@ -165,7 +158,7 @@ checker: returning a borrow from one branch, then using the map again in the oth
 [polonius-the-crab](https://crates.io/crates/polonius-the-crab) makes that single-lookup
 version expressible in safe Rust, with no runtime cost.
 
-The experiments that did not pay off:
+Two experiments did not pay off:
 
 - **One table instead of two,** with each entry tagged by its generation. Promotions became
   a single in-place write, and gets got 15% faster. But dropping a generation from a shared
